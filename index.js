@@ -1,6 +1,7 @@
 import express from 'express'
 import Stripe from 'stripe';
 import * as dotenv from 'dotenv'
+import { products } from "./products.js";
 
 dotenv.config()
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -15,15 +16,15 @@ app.get('/', (req, res) => {
 
 app.post('/payments', async (req, res) => {
 
-    const product = await stripe.products.create({
-        name: 'Test Product',
-    });
-
-    const price = await stripe.prices.create({
-        unit_amount: 2500,
-        currency: 'usd',
-        product: product.id,
-    });
+    // const product = await stripe.products.create({
+    //     name: 'Test Product',
+    // });
+    //
+    // const price = await stripe.prices.create({
+    //     unit_amount: 2500,
+    //     currency: 'usd',
+    //     product: product.id,
+    // });
 
     // const paymentMethod = await stripe.paymentMethods.create({
     //     type: 'card',
@@ -34,7 +35,7 @@ app.post('/payments', async (req, res) => {
     //         cvc: req.body.card.cvc,
     //     },
     // });
-
+    //
     // const paymentIntent = await stripe.paymentIntents.create({
     //     confirm: true,
     //     amount: req.body.items[0].price,
@@ -43,12 +44,28 @@ app.post('/payments', async (req, res) => {
     //     payment_method: paymentMethod.id,
     //     return_url: `${process.env.SERVER_URL}/payments/complete`
     // });
+    // res.send(paymentIntent)
+
+    const allProducts = req.body.items.map( (item) => {
+        const product = products.find( (element) => {
+            if (element.id === item.id) return element
+        })
+        return {
+            price_data: {
+                currency: product.price.currency,
+                product_data: {
+                    name: product.name,
+                },
+                unit_amount: product.price.unit_amount
+            },
+            quantity: item.quantity,
+        }
+    })
+
 
     const session = await stripe.checkout.sessions.create({
         success_url: `${process.env.SERVER_URL}/success`,
-        line_items: [
-            {price: price.id, quantity: 2},
-        ],
+        line_items: allProducts,
         mode: 'payment',
     });
         res.send({ "url" : session.url});
